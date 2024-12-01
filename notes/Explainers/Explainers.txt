@@ -1,0 +1,23 @@
+Order of game code running
+
+  The order in which these events per object run is based on memory which one was added to the room first
+	or something to the effect. It is not something that is controlable. This is most relevent when a player
+	must interact with an object, its important the objects code has run before the players, so that timing of
+	it matches. Example being a moving platform needs to have moved (run its code) in the the event prior to 
+	the players interaction with it, so it can run in the begin step, while the player runs in the step. Could also
+	happen in the end step, point is that the player runs at a differnt time then the thing it needs to interact with
+	so that all parameters can be calculated correctly.
+	 
+	** Start of the game frame **
+
+	1. Create Event
+
+	2. Begin Step Event
+
+	3. Step Event
+
+	4. End Step Event
+
+	5. Draw Event(s)
+
+	** End of the game frame **

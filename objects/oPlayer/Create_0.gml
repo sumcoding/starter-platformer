@@ -7,9 +7,13 @@ function setOnGround(_val = true) {
 		hangTimer = hangFrames
 	} else {
 		onGround = _val
+		// forget the platform we were on
+		curFloorPlat = noone
 		hangTimer = 0
 	}
 }
+
+depth = -30
 
 // controls setup
 controlsSetup()
@@ -28,12 +32,12 @@ face = 1
 moveDir = 0
 runType = 0
 moveSpd = [2, 3.5]
-xSpd = 0
-ySpd = 0
+xspd = 0
+yspd = 0
 
 // Jumping
 gravSpd = .375
-velSpd = 4 // maximum speed you can fall at
+velSpd = 4 // maximum speed you can fall at or terminal velocity
 
 jumpMax = 2
 jumpCount = 0
@@ -52,4 +56,9 @@ hangTimer = 0
 // Jump time
 jumpFrames = 5
 jumpTimer = 0
+
+
+// moving platforms
+curFloorPlat = noone
+movePlatXspd = 0
 

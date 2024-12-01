@@ -18,6 +18,8 @@
   ],
   "ResourceOrderSettings":[
     {"name":"oCamera","order":2,"path":"objects/oCamera/oCamera.yy",},
+    {"name":"oSemiSolidMove","order":8,"path":"objects/oSemiSolidMove/oSemiSolidMove.yy",},
+    {"name":"oSemiSolidWall","order":7,"path":"objects/oSemiSolidWall/oSemiSolidWall.yy",},
     {"name":"oSlope0","order":3,"path":"objects/oSlope0/oSlope0.yy",},
     {"name":"oSlope1","order":4,"path":"objects/oSlope1/oSlope1.yy",},
     {"name":"oSlope2","order":5,"path":"objects/oSlope2/oSlope2.yy",},
@@ -29,6 +31,8 @@
     {"name":"sPlayerJump","order":4,"path":"sprites/sPlayerJump/sPlayerJump.yy",},
     {"name":"sPlayerRun","order":5,"path":"sprites/sPlayerRun/sPlayerRun.yy",},
     {"name":"sPlayerWalk","order":3,"path":"sprites/sPlayerWalk/sPlayerWalk.yy",},
+    {"name":"sSemiSolidMove","order":11,"path":"sprites/sSemiSolidMove/sSemiSolidMove.yy",},
+    {"name":"sSemiSolidWall","order":12,"path":"sprites/sSemiSolidWall/sSemiSolidWall.yy",},
     {"name":"sSlope0","order":7,"path":"sprites/sSlope0/sSlope0.yy",},
     {"name":"sSlope1","order":9,"path":"sprites/sSlope1/sSlope1.yy",},
     {"name":"sSlope2","order":8,"path":"sprites/sSlope2/sSlope2.yy",},
