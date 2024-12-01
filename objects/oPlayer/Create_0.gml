@@ -13,6 +13,11 @@ function setOnGround(_val = true) {
 	}
 }
 
+function checkInstance(inst, obj = curFloorPlat) {
+	return obj.object_index == inst 
+		|| object_is_ancestor(obj.object_index, inst)
+}
+
 depth = -30
 
 // controls setup
@@ -34,10 +39,11 @@ runType = 0
 moveSpd = [2, 3.5]
 xspd = 0
 yspd = 0
+platXspd = 0 // x speed of a moving platform
 
 // Jumping
 gravSpd = .375
-velSpd = 4 // maximum speed you can fall at or terminal velocity
+vspd = 4 // maximum speed you can fall at or terminal velocity
 
 jumpMax = 2
 jumpCount = 0

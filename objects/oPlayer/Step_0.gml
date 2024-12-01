@@ -2,56 +2,6 @@
 // Get inputs, must be done first
 getControls()
 
-/*  X movement */
-function xMovement() {
-	moveDir = rightKey - leftKey
-	// get face
-	if moveDir != 0 { face = moveDir }
-
-	// Get X speed
-	runType = runKey
-	xspd = moveDir * moveSpd[runType]
-
-	// X collision
-	var _subPixel = .5
-	if place_meeting(x + xspd, y, oWall) {
-		// if i am moving up a slope and there is no wall above me
-		if !place_meeting(x + xspd, y - abs(xspd) - 1, oWall) {
-			while place_meeting(x + xspd, y, oWall) {
-				y -= _subPixel
-			}
-		} else {
-			// check if ceiling slope, do abs(xspd * 2) if you want to slide on steeper ceilings
-			if !place_meeting(x + xspd, y + abs(xspd) + 1, oWall) {
-				// slide down slope instead of sticking
-				while place_meeting(x + xspd, y, oWall) {
-					y += _subPixel
-				}
-			} else {
-				// scoot up to wall nice and tight
-				var _pixelCheck = _subPixel * sign(xspd)
-
-				while !place_meeting(x + _pixelCheck, y, oWall) {
-					x += _pixelCheck
-				}
-
-				// collide/stop
-				xspd = 0
-			}
-		}
-	}
-
-	// go down slopes
-	if yspd >= 0 && !place_meeting(x + xspd, y + 1, oWall) && place_meeting(x + xspd, y + abs(xspd) + 1, oWall) {
-		while !place_meeting(x + xspd, y + _subPixel, oWall) {
-			y += _subPixel
-		}
-	}
-
-	// Move the character
-	x += xspd
-}
-
 function jump() {
 	// Gravity
 	if hangTimer > 0 {
@@ -123,6 +73,7 @@ function basicYCollision() {
 	yspd = 0
 }
 
+// for non moving platforms
 function floorYCollision() {
   // check for solid and semi solid platforms underneath
 	var _clampYspd = max(0, yspd)
@@ -135,7 +86,7 @@ function floorYCollision() {
 	array_push(_array, oWall, oSemiSolidWall)
 
 	// collision check and add to list
-	var _listSize = instance_place_list(x, y + 1 + _clampYspd + velSpd, _array, _list, false)
+	var _listSize = instance_place_list(x, y + 1 + _clampYspd + vspd, _array, _list, false)
 
 	// loop through colliding instances and only return one if its top is below the player
 	for (var i = 0; i < _listSize; i++) {
@@ -146,8 +97,7 @@ function floorYCollision() {
 		if (_inst.yspd <= yspd || instance_exists(curFloorPlat)) 
 		&& (_inst.yspd > 0 || place_meeting(x, y + 1 + _clampYspd, _inst)) {
 			// get a solid wall or semi solid wall below player
-			if _inst.object_index == oWall 
-			|| object_is_ancestor(_inst.object_index, oWall) 
+			if checkInstance(oWall, _inst) 
 			|| floor(bbox_bottom) <= ceil(_inst.bbox_top - _inst.yspd) {
 				// get the "highest" wall object
 				if !instance_exists(curFloorPlat)
@@ -162,7 +112,7 @@ function floorYCollision() {
 	ds_list_destroy(_list)
 
 	// one last check to make sure the floor is below us, resets the current floor instance
-	if instance_exists(curFloorPlat) && !place_meeting(x, y + velSpd + velSpd, curFloorPlat) {
+	if instance_exists(curFloorPlat) && !place_meeting(x, y + vspd + vspd, curFloorPlat) {
 		curFloorPlat = noone
 	}
 	// land on ground platform, stops us from clipping through the floor occasionally
@@ -173,23 +123,131 @@ function floorYCollision() {
 			y += _subPixel
 		}
 		// make sure we dont end up below the top of a semi solid wall
-		if curFloorPlat.object_index == oSemiSolidWall 
-		|| object_is_ancestor(curFloorPlat.object_index, oSemiSolidWall) {
+		if checkInstance(oSemiSolidMove) {
 			while place_meeting(x, y, curFloorPlat) { y -= _subPixel }
 		}
-		// prevents tiny clips into floor
+		// prevents tiny clips into floor, smooths things out, good for non moving platforms
 		y = floor(y)
 
-		// colid with ground
+		// collide with ground
 		yspd = 0
 		setOnGround()
 	}
 }
 
+// NOTE: bbox means cant use odd shaped objects, only squares
+
+function movingFloorXCollision() {
+	platXspd = 0
+	// get the platform x speed
+	if instance_exists(curFloorPlat) { platXspd = curFloorPlat.xspd }
+
+	// move with the plat xspd
+	if place_meeting(x + platXspd, y, oWall) {
+		var _subPixel = .5
+		// scoot up to wall
+		var _pixelCheck = _subPixel * sign(platXspd)
+		while !place_meeting(x + _pixelCheck, y, oWall) {
+			x += _pixelCheck
+		}
+
+		// set plat x speed to 0 to finish collision
+		platXspd = 0
+	}
+
+	// move with the platform
+	x += platXspd
+}
+
+function movingFloorYCollision() {		
+	// y - snap player to floor platform if moving vertically
+	if instance_exists(curFloorPlat) && (
+		curFloorPlat.yspd != 0 
+		|| checkInstance(oSemiSolidMove)
+	) {
+		// snap to top of floor platform ( un-floor the y var so its not choppy)
+		if !place_meeting(x, curFloorPlat.bbox_top, oWall)
+		&& curFloorPlat.bbox_top >= bbox_bottom - vspd {
+			y = curFloorPlat.bbox_top
+		}
+
+		// THIS WILL LIKELY GO AWAY... part 8
+		// going up into a solid wall while on a semisolid platform
+		if curFloorPlat.yspd < 0 && place_meeting(x, y + curFloorPlat.yspd, oWall) {
+			if checkInstance(oSemiSolidWall) {
+				var _subPixel = .25
+				// get pushed down through the semi solid wall
+				while place_meeting(x, y + curFloorPlat.yspd, oWall) {
+					y += _subPixel
+				}
+				// if we got pushed into the a solid wall while going downwards, push back out
+				while place_meeting(x, y, oWall) {
+					y -= _subPixel
+				}
+				y = round(y)
+			}
+
+			// cancel the curFloorPlat
+			setOnGround(false)
+		}
+	}
+}
+
+function xMovement() {
+	moveDir = rightKey - leftKey
+	// get face
+	if moveDir != 0 { face = moveDir }
+
+	// Get X speed
+	runType = runKey
+	xspd = moveDir * moveSpd[runType]
+
+	// X collision
+	var _subPixel = .5
+	if place_meeting(x + xspd, y, oWall) {
+		// if i am moving up a slope and there is no wall above me
+		if !place_meeting(x + xspd, y - abs(xspd) - 1, oWall) {
+			while place_meeting(x + xspd, y, oWall) {
+				y -= _subPixel
+			}
+		} else {
+			// check if ceiling slope, do abs(xspd * 2) if you want to slide on steeper ceilings
+			if !place_meeting(x + xspd, y + abs(xspd) + 1, oWall) {
+				// slide down slope instead of sticking
+				while place_meeting(x + xspd, y, oWall) {
+					y += _subPixel
+				}
+			} else {
+				// scoot up to wall nice and tight
+				var _pixelCheck = _subPixel * sign(xspd)
+
+				while !place_meeting(x + _pixelCheck, y, oWall) {
+					x += _pixelCheck
+				}
+
+				// collide/stop
+				xspd = 0
+			}
+		}
+	}
+
+	// go down slopes
+	if yspd >= 0 && !place_meeting(x + xspd, y + 1, oWall) && place_meeting(x + xspd, y + abs(xspd) + 1, oWall) {
+		while !place_meeting(x + xspd, y + _subPixel, oWall) {
+			y += _subPixel
+		}
+	}
+
+	// Move the character
+	x += xspd
+
+	movingFloorXCollision()
+}
+
 function yMovement() {
 	// Y Collision
 	// Cap fall speed
-	if yspd > velSpd { yspd = velSpd }
+	if yspd > vspd { yspd = vspd }
 
 	var _subPixel = .5
 	// upwards y collision (with ceiling slopes) (ONLY IF YOU WANT TO HAVE CEILINGS KINDA PULL YOU UP)
@@ -235,12 +293,15 @@ function yMovement() {
 
 	// move up
 	y += yspd
+
+	movingFloorYCollision()
 }
 
 // Call movement in correct order
 xMovement()
 jump()
 yMovement()
+
 
 /* Sprite control */ 
 // walking
