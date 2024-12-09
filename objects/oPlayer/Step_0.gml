@@ -2,6 +2,86 @@
 // Get inputs, must be done first
 getControls()
 
+// get out of the solid moving walls that have posistioned themselves into the player in begin step
+function getOutOfSolidMoveWalls() {
+	var _rightWall = noone
+	var _leftWall = noone
+	var _upWall = noone
+	var _downWall = noone
+
+	var _list = ds_list_create()
+	var _listSize = instance_place_list(x, y, oWallMove, _list, false)
+
+	for (var i = 0; i < _listSize; i++) {
+		var _inst = _list[| i]
+		// get the closest right wall
+		if _inst.bbox_left - _inst.xspd >= bbox_right-1 {
+			if !instance_exists(_rightWall) || _inst.bbox_left < _rightWall.bbox_left {
+				_rightWall = _inst
+			}
+		}
+		// get the closest left wall
+		if _inst.bbox_right - _inst.xspd <= bbox_left+1 {
+			if !instance_exists(_leftWall) || _inst.bbox_right > _leftWall.bbox_right {
+				_leftWall = _inst
+			}
+		}
+		// get the closest down wall
+		if _inst.bbox_top - _inst.yspd >= bbox_bottom-1 {
+			if !instance_exists(_downWall) || _inst.bbox_top < _downWall.bbox_top {
+				_downWall = _inst
+			}
+		}
+		// get the closest up wall
+		if _inst.bbox_bottom - _inst.yspd <= bbox_top+1 {
+			if !instance_exists(_upWall) || _inst.bbox_bottom > _upWall.bbox_bottom {
+				_upWall = _inst
+			}
+		}
+	}
+
+	ds_list_destroy(_list)
+
+	// right wall
+	if instance_exists(_rightWall) {
+		var _rightDist = bbox_right - x
+		x = _rightWall.bbox_left - _rightDist
+	}
+	// left wall
+	if instance_exists(_leftWall) {
+		var _leftDist = x - bbox_left
+		x = _leftWall.bbox_right + _leftDist
+	}
+	// down wall
+	if instance_exists(_downWall) {
+		var _downDist = bbox_bottom - y
+		y = _downWall.bbox_top - _downDist
+	}
+	// up wall - includes collision for crouch feature, which is why its different to the above
+	if instance_exists(_upWall) {
+		var _upDist = y - bbox_top
+		var _targetY = _upWall.bbox_bottom + _upDist
+		// check if there isnt a wall in the way
+		if !place_meeting(x, _targetY, oWall) {
+			y = _targetY
+		} 
+	}
+
+	// dont get left behind by the moving walls
+	earlyMovePlatXspd = false
+	if instance_exists(curFloorPlat) 
+	   && curFloorPlat.xspd != 0
+	   && !place_meeting(x, y + movePlatXspd + 1, curFloorPlat) {
+
+		var _xCheck = curFloorPlat.xspd
+		// go ahead and move back on to the wall if no wall is in the way
+		if !place_meeting(x + _xCheck, y, oWall) {
+			x += _xCheck
+			earlyMovePlatXspd = true
+		}
+	}
+}
+
 function jump() {
 	// Gravity
 	if hangTimer > 0 {
@@ -157,31 +237,34 @@ function floorYCollision() {
 // NOTE: bbox means cant use odd shaped objects, only squares
 
 function movingFloorXCollision() {
-	platXspd = 0
+	movePlatXspd = 0
 	// get the platform x speed
-	if instance_exists(curFloorPlat) { platXspd = curFloorPlat.xspd }
+	if instance_exists(curFloorPlat) { movePlatXspd = curFloorPlat.xspd }
 
 	// move with the plat xspd
-	if place_meeting(x + platXspd, y, oWall) {
-		var _subPixel = .5
-		// scoot up to wall
-		var _pixelCheck = _subPixel * sign(platXspd)
-		while !place_meeting(x + _pixelCheck, y, oWall) {
-			x += _pixelCheck
+	if !earlyMovePlatXspd {
+		if place_meeting(x + movePlatXspd, y, oWall) {
+			var _subPixel = .5
+			// scoot up to wall
+			var _pixelCheck = _subPixel * sign(movePlatXspd)
+			while !place_meeting(x + _pixelCheck, y, oWall) {
+				x += _pixelCheck
+			}
+
+			// set plat x speed to 0 to finish collision
+			movePlatXspd = 0
 		}
 
-		// set plat x speed to 0 to finish collision
-		platXspd = 0
+		// move with the platform
+		x += movePlatXspd
 	}
-
-	// move with the platform
-	x += platXspd
 }
 
 function movingFloorYCollision() {		
 	// y - snap player to floor platform if moving vertically
 	if instance_exists(curFloorPlat) && (
 		curFloorPlat.yspd != 0 
+	  || checkInstance(oWallMove)
 		|| checkInstance(oSemiSolidMove)
 	) {
 		// snap to top of floor platform ( un-floor the y var so its not choppy)
@@ -190,24 +273,49 @@ function movingFloorYCollision() {
 			y = curFloorPlat.bbox_top
 		}
 
-		// THIS WILL LIKELY GO AWAY... part 8
-		// going up into a solid wall while on a semisolid platform
-		if curFloorPlat.yspd < 0 && place_meeting(x, y + curFloorPlat.yspd, oWall) {
-			if checkInstance(oSemiSolidWall) {
-				var _subPixel = .25
-				// get pushed down through the semi solid wall
-				while place_meeting(x, y + curFloorPlat.yspd, oWall) {
-					y += _subPixel
-				}
-				// if we got pushed into the a solid wall while going downwards, push back out
-				while place_meeting(x, y, oWall) {
-					y -= _subPixel
-				}
-				y = round(y)
-			}
+						// THIS WILL LIKELY GO AWAY... part 8 - made redundent by code block below
+						// going up into a solid wall while on a semisolid platform
+						/* if curFloorPlat.yspd < 0 && place_meeting(x, y + curFloorPlat.yspd, oWall) {
+							if checkInstance(oSemiSolidWall) {
+								var _subPixel = .25
+								// get pushed down through the semi solid wall
+								while place_meeting(x, y + curFloorPlat.yspd, oWall) {
+									y += _subPixel
+								}
+								// if we got pushed into the a solid wall while going downwards, push back out
+								while place_meeting(x, y, oWall) {
+									y -= _subPixel
+								}
+								y = round(y)
+							}
 
-			// cancel the curFloorPlat
-			setOnGround(false)
+							// cancel the curFloorPlat
+							setOnGround(false)
+						} */
+	}
+
+	// get pushed down through a semisolid wall by a moving solid wall
+	if instance_exists(curFloorPlat) 
+		 && checkInstance(oSemiSolidWall) 
+		 && place_meeting(x, y, oWall) 
+	{
+		// if player is already stuck in a wall, try and move me down to get below semi solid
+		// if still stuck player is crushed
+
+		// dont check too far so we dont warp below walls
+		var _maxPushDist = 10 // 10 pixels, fastest a move plat should be able to move down
+		var _pushedDist = 0
+		var _startY = y
+		while place_meeting(x, y, oWall) && _pushedDist < _maxPushDist {
+			y++
+			_pushedDist++
+		}
+		// forget curFloorPlat
+		curFloorPlat = noone
+
+		// if we are still stuck, we are crushed, take me back to my y to avoid the funk
+		if _pushedDist > _maxPushDist {
+			y = _startY
 		}
 	}
 }
@@ -294,7 +402,6 @@ function pushPlayerThroughWallOnDown() {
 	}
 }
 
-
 function yMovement() {
 	// Y Collision
 	// Cap fall speed
@@ -346,16 +453,22 @@ function yMovement() {
 	pushPlayerThroughWallOnDown()
 
 	// move up
-	y += yspd
+	if !place_meeting(x, y + yspd, oWall) { y += yspd }
 
 	movingFloorYCollision()
 }
+
+// IMPORTANT: must be called before anything else
+getOutOfSolidMoveWalls()
 
 // Call movement in correct order
 xMovement()
 jump()
 yMovement()
 
+// temp - check if crushed
+image_blend = c_white
+if place_meeting(x, y, oWall) { image_blend = c_blue }
 
 /* Sprite control */ 
 // walking

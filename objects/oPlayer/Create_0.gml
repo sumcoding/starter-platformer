@@ -63,7 +63,6 @@ runType = 0
 moveSpd = [2, 3.5]
 xspd = 0
 yspd = 0
-platXspd = 0 // x speed of a moving platform
 
 // Jumping
 gravSpd = .375
@@ -93,5 +92,6 @@ curFloorPlat = noone
 downSemiSolidWall = noone
 // [Down off semi solid wall] use below if you want to allow the player to willfully fall through semi solid walls (look for other instances of this, to see implementation)
 forgetSemiSolidWall = noone
-movePlatXspd = 0
+movePlatXspd = vspd
+earlyMovePlatXspd = false
 

@@ -25,6 +25,8 @@
     {"name":"oSlope2","order":5,"path":"objects/oSlope2/oSlope2.yy",},
     {"name":"oSlope3","order":6,"path":"objects/oSlope3/oSlope3.yy",},
     {"name":"oWall","order":1,"path":"objects/oWall/oWall.yy",},
+    {"name":"oWallMove","order":9,"path":"objects/oWallMove/oWallMove.yy",},
+    {"name":"oWallMoveSimple","order":10,"path":"objects/oWallMoveSimple/oWallMoveSimple.yy",},
     {"name":"Init","order":1,"path":"rooms/Init/Init.yy",},
     {"name":"sPlayerCrouch","order":6,"path":"sprites/sPlayerCrouch/sPlayerCrouch.yy",},
     {"name":"sPlayerIdle","order":2,"path":"sprites/sPlayerIdle/sPlayerIdle.yy",},
@@ -38,5 +40,6 @@
     {"name":"sSlope2","order":8,"path":"sprites/sSlope2/sSlope2.yy",},
     {"name":"sSlope3","order":10,"path":"sprites/sSlope3/sSlope3.yy",},
     {"name":"sWall","order":1,"path":"sprites/sWall/sWall.yy",},
+    {"name":"sWallMove","order":14,"path":"sprites/sWallMove/sWallMove.yy",},
   ],
 }
