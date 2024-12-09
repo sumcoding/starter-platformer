@@ -24,8 +24,15 @@ function jump() {
 		if jumpCount == 0 && jumpTimer <= 0 { jumpCount = 1 }
 	}
 
+	// [Down off semi solid wall]
+	var _floorIsSolid = false
+	if instance_exists(curFloorPlat) && checkInstance(oWall) {
+		_floorIsSolid = true
+	}
 	// Initiate the Jump
-	if jumpKeyBuffered && jumpCount < jumpMax {
+	if jumpKeyBuffered && jumpCount < jumpMax 
+	&& (!downKey || _floorIsSolid) // [Down off semi solid wall]
+	{
 		//reset buffer
 		jumpKeyBuffered = false
 		jumpKeyBufferedTimer = 0
@@ -52,8 +59,8 @@ function jump() {
 		//Count down jump timer
 		jumpHoldTimer--	
 	}
-
 }
+
 // stops character when they hit a wall up or down
 function basicYCollision() {
 	var _subPixel = .5
@@ -88,15 +95,24 @@ function floorYCollision() {
 	// collision check and add to list
 	var _listSize = instance_place_list(x, y + 1 + _clampYspd + vspd, _array, _list, false)
 
+	// HIGH RES FIX: same principle as the downSemiSolidWall, check for semisolid plat below me
+	var _ycheck = y + 1 + _clampYspd + vspd
+	if instance_exists(curFloorPlat) { _ycheck += max(_ycheck, curFloorPlat.yspd) }
+	var _semiSolidInst = checkForLowerSemiSolidWall(x, _ycheck)
+
 	// loop through colliding instances and only return one if its top is below the player
 	for (var i = 0; i < _listSize; i++) {
 		// get an instance of wall or semi solid wall
 		var _inst = _list[| i]
 		// IMPORTANT: it is expected that all walls have an xspd and a yspd
 		// avoid magnitism to floor
-		if (_inst.yspd <= yspd || instance_exists(curFloorPlat)) 
-		&& (_inst.yspd > 0 || place_meeting(x, y + 1 + _clampYspd, _inst)) {
-			// get a solid wall or semi solid wall below player
+		if (
+		_inst != forgetSemiSolidWall && // [Down off semi solid wall]
+		(_inst.yspd <= yspd || instance_exists(curFloorPlat)) 
+		&& (_inst.yspd > 0 || place_meeting(x, y + 1 + _clampYspd, _inst))) 
+	  || _inst == _semiSolidInst // HIGH RES FIX
+		{
+			// get a solid wall or semi solid wall below playerd
 			if checkInstance(oWall, _inst) 
 			|| floor(bbox_bottom) <= ceil(_inst.bbox_top - _inst.yspd) {
 				// get the "highest" wall object
@@ -110,6 +126,9 @@ function floorYCollision() {
 	}
 	// destroy list to avoid the memory leak
 	ds_list_destroy(_list)
+
+	// if we have a downSemisolidWall, make that the current floor
+	if instance_exists(downSemiSolidWall) { curFloorPlat = downSemiSolidWall }
 
 	// one last check to make sure the floor is below us, resets the current floor instance
 	if instance_exists(curFloorPlat) && !place_meeting(x, y + vspd + vspd, curFloorPlat) {
@@ -232,9 +251,13 @@ function xMovement() {
 	}
 
 	// go down slopes
+	downSemiSolidWall = noone
 	if yspd >= 0 && !place_meeting(x + xspd, y + 1, oWall) && place_meeting(x + xspd, y + abs(xspd) + 1, oWall) {
-		while !place_meeting(x + xspd, y + _subPixel, oWall) {
-			y += _subPixel
+		// check for semisolid wall below
+		downSemiSolidWall = checkForLowerSemiSolidWall(x + xspd, y + abs(xspd) + 1)
+		// if no semisolid wall below, precisely go down slope
+		if !instance_exists(downSemiSolidWall) {
+			while !place_meeting(x + xspd, y + _subPixel, oWall) { y += _subPixel }
 		}
 	}
 
@@ -243,6 +266,34 @@ function xMovement() {
 
 	movingFloorXCollision()
 }
+
+// [Down off semi solid wall]
+function pushPlayerThroughWallOnDown() {
+	if downKey && jumpKeyPressed {
+		// push through semi solid wall
+		if instance_exists(curFloorPlat) && checkInstance(oSemiSolidWall) {
+			var _ycheck = max(1, curFloorPlat.yspd + 1)
+			if !place_meeting(x, y + _ycheck, oWall) {
+				// move below the platform
+				y += 1
+
+				// inherit any downward speed from the platform so it doesnt catch
+				yspd = _ycheck - 1
+				// forget for a breaf moment so we dont get caught again
+				forgetSemiSolidWall = curFloorPlat
+
+				// no more floor for player
+				setOnGround(false)
+			}
+		}
+	}
+
+	// This may need to be under y += yspd in yMovement
+	if instance_exists(forgetSemiSolidWall) && !place_meeting(x, y, forgetSemiSolidWall) {
+		forgetSemiSolidWall = noone
+	}
+}
+
 
 function yMovement() {
 	// Y Collision
@@ -290,6 +341,9 @@ function yMovement() {
 	// 	}
 	// }
 	floorYCollision()
+
+	// [Down off semi solid wall]
+	pushPlayerThroughWallOnDown()
 
 	// move up
 	y += yspd

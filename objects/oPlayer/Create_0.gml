@@ -14,9 +14,33 @@ function setOnGround(_val = true) {
 }
 
 function checkInstance(inst, obj = curFloorPlat) {
-	return obj.object_index == inst 
-		|| object_is_ancestor(obj.object_index, inst)
+	return obj && (obj.object_index == inst 
+		|| object_is_ancestor(obj.object_index, inst))
 }
+
+function checkForLowerSemiSolidWall(_x, _y) {
+	var _actual_inst = noone
+	// check if we are moving down and if we are colliding with a semi solid wall
+	if yspd >= 0 && place_meeting(_x, _y, oSemiSolidWall)
+	{
+		// create a list of all the semi solid walls below us
+		var _list = ds_list_create()
+		var _listSize = instance_place_list(_x, _y, oSemiSolidWall, _list, false)
+
+		// loop through instances and only return one if its colliding with the player
+		for (var i = 0; i < _listSize; i++) {
+			var _inst = _list[| i]
+			if 
+			_inst != forgetSemiSolidWall &&// [Down off semi solid wall]
+			floor(bbox_bottom) <= ceil(_inst.bbox_top - _inst.yspd) {
+				_actual_inst = _inst
+				break
+			}
+		}
+		ds_list_destroy(_list)
+	}
+	return _actual_inst;
+} 
 
 depth = -30
 
@@ -66,5 +90,8 @@ jumpTimer = 0
 
 // moving platforms
 curFloorPlat = noone
+downSemiSolidWall = noone
+// [Down off semi solid wall] use below if you want to allow the player to willfully fall through semi solid walls (look for other instances of this, to see implementation)
+forgetSemiSolidWall = noone
 movePlatXspd = 0
 
