@@ -127,10 +127,7 @@ function jump() {
 		setOnGround(false)
 		jumpTimer = 0
 	}
-	// Cut off jump by releasing jump button
-	if !jumpKey {
-		jumpHoldTimer = 0
-	}
+
 	// Jump based on the timer/holding the button
 	if jumpHoldTimer > 0 {
 		// constantly set the yspd to be the jumpSpd
@@ -138,6 +135,33 @@ function jump() {
 		
 		//Count down jump timer
 		jumpHoldTimer--	
+	}
+
+	// Cut off jump by releasing jump button
+	if !jumpKey {
+		jumpHoldTimer = 0
+	}
+}
+
+function crouch() {
+	// keep "|| rightside" to force crouch if wall collision (auto prevent crush in some cases)
+	var _shouldCrouch = downKey || place_meeting(x, y, oWall)
+	// keep "|| rightside" to force uncrouch if no down key or in air (jumping)
+	var _shouldUncrouch = !downKey || !onGround
+	// player initiated crouch
+	if onGround && _shouldCrouch {
+		crouching = true
+	}
+
+	if crouching { mask_index = crouchSpr }
+
+	if crouching && _shouldUncrouch {
+		mask_index = maskSpr
+		if !place_meeting(x, y, oWall) {
+			crouching = false
+		} else {
+			mask_index = crouchSpr
+		}
 	}
 }
 
@@ -329,6 +353,9 @@ function xMovement() {
 	runType = runKey
 	xspd = moveDir * moveSpd[runType]
 
+	// prevent movent if crouching (allow player to look left/right)
+	if crouching { xspd = 0 }
+
 	// X collision
 	var _subPixel = .5
 	if place_meeting(x + xspd, y, oWall) {
@@ -436,17 +463,17 @@ function yMovement() {
 
 	}
 
-	// downwards y collision (before moving platforms)
-	// if yspd >= 0 {
-	// 	if place_meeting(x, y + yspd, oWall) {
-	// 		basicYCollision()
-	// 	}
+				// downwards y collision (before moving platforms)
+				/*  if yspd >= 0 {
+					if place_meeting(x, y + yspd, oWall) {
+						basicYCollision()
+					}
 
-	// 	// set if i am on the ground
-	// 	if place_meeting(x, y + 1, oWall) {
-	// 		setOnGround()
-	// 	}
-	// }
+					// set if i am on the ground
+					if place_meeting(x, y + 1, oWall) {
+						setOnGround()
+					}
+				} */
 	floorYCollision()
 
 	// [Down off semi solid wall]
@@ -461,7 +488,9 @@ function yMovement() {
 // IMPORTANT: must be called before anything else
 getOutOfSolidMoveWalls()
 
+
 // Call movement in correct order
+crouch()
 xMovement()
 jump()
 yMovement()
@@ -480,4 +509,7 @@ if xspd == 0 { sprite_index = idleSpr }
 // jumping
 if !onGround { sprite_index = jumpSpr }
 
+if crouching { sprite_index = crouchSpr }
+
 mask_index = maskSpr
+if crouching { mask_index = crouchSpr }

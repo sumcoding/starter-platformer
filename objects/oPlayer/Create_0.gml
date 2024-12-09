@@ -55,7 +55,6 @@ runSpr = sPlayerRun
 jumpSpr = sPlayerJump
 crouchSpr = sPlayerCrouch
 
-
 // Moving
 face = 1
 moveDir = 0
@@ -63,6 +62,9 @@ runType = 0
 moveSpd = [2, 3.5]
 xspd = 0
 yspd = 0
+
+// State vars
+crouching = false
 
 // Jumping
 gravSpd = .375
